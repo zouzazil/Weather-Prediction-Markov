@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkyCast</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Anton+SC&family=Bebas+Neue&family=Fira+Sans+Condensed:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900&display=swap');
+    
+    body {
+      font-family: 'Bebas Neue', sans-serif;
+      background-image: url('https://i.pinimg.com/originals/bd/72/d1/bd72d10c741dde2ce2684577ffa0d86f.gif');
+      background-repeat: no-repeat;
+      background-size: cover;
+      background-attachment: fixed;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+
+    .container {
+      width: 400px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      text-align: center;
+      margin-top: 30px;
+    }
+
+    .header {
+      background-color: #2045bd;
+      color: white;
+      padding: 10px 0;
+      font-size: 24px;
+      font-weight: bold;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .input-group {
+      margin: 15px 0;
+      text-align: left;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    input,
+    select,
+    button {
+      width: calc(100% - 40px);
+      padding: 10px;
+      margin-left: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: 'Fira Sans Condensed', sans-serif;
+      font-size: large;
+    }
+
+    select:invalid {
+      color: rgb(65, 65, 65);
+    }
+
+    button {
+      background-color: #2045bd;
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 10px 0;
+      border-radius: 4px;
+      font-weight: bold;
+      transition: background-color 0.6s, color 0.6s;
+    }
+
+    button:hover {
+      background-color: #001d74;
+    }
+
+    .result-section {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .result-box {
+      width: calc(100% - 40px);
+      height: 150px;
+      background-color: #d8eaff;
+      margin: 20px auto;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 10px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">SkyCast</div>
+    <form id="skycastForm">
+      <div class="input-group">
+        <label for="numDays">Number of Days:</label>
+        <input type="number" id="numDays" min="1" max="7" placeholder="Enter a number of days (1-7)">
+      </div>
+      <div class="input-group" id="weatherInputs">
+        <!-- Weather pattern inputs -->
+      </div>
+      <div class="input-group">
+        <label for="weatherToday">Weather Today:</label>
+        <select id="weatherToday" required>
+          <option value="" disabled selected hidden>Input the weather here.</option>
+          <option value="Sunny">Sunny</option>
+          <option value="Cloudy">Cloudy</option>
+          <option value="Partly Cloudy">Partly Cloudy</option>
+          <option value="Rainy">Rainy</option>
+          <option value="Thunderstorms">Thunderstorms</option>
+        </select>
+      </div>
+      <button type="submit" id="predictBtn">Predict</button>
+    </form>
+    <div id="resultSection" class="result-section hidden">
+      <h3>Weather Prediction:</h3>
+      <div id="resultBox" class="result-box"></div>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
+  <script>
+    // global arrays
+const weatherPatternsArray = [];
+const weatherInputs = document.getElementById("weatherInputs");
+const resultBox = document.getElementById("resultBox");
+const resultSection = document.getElementById("resultSection");
+const skycastForm = document.getElementById("skycastForm");
+
+//val
+document.getElementById("numDays").addEventListener("input", function () {
+  const numDays = parseInt(this.value);
+
+  // Clear existing inputs
+  weatherInputs.innerHTML = "";
+  // Validate input
+  if (isNaN(numDays) || numDays < 1 || numDays > 7) return; // Exit if the input is invalid
+
+  // Generate inputs for each day based on the number of days
+  for (let i = 1; i <= numDays; i++) {
+    const inputGroup = document.createElement("div");
+    inputGroup.className = "input-group";
+    inputGroup.id = `inputGroup${i}`;
+    inputGroup.style.display = i === 1 ? "block" : "none"; // Show only the first day initially
+
+    const label = document.createElement("label");
+    label.textContent = `Day ${i}:`;
+    label.htmlFor = `day${i}`;
+
+    const select = document.createElement("select");
+    select.id = `day${i}`;
+    select.innerHTML = `
+      <option value="" selected disabled>Choose weather</option>
+      <option value="Sunny">Sunny</option>
+      <option value="Cloudy">Cloudy</option>
+      <option value="Partly Cloudy">Partly Cloudy</option>
+      <option value="Rainy">Rainy</option>
+      <option value="Thunderstorms">Thunderstorms</option>
+    `;
+
+    select.addEventListener("change", () => {
+      const nextGroup = document.getElementById(`inputGroup${i + 1}`);
+      if (nextGroup) nextGroup.style.display = "block";
+    });
+
+    inputGroup.appendChild(label);
+    inputGroup.appendChild(select);
+    weatherInputs.appendChild(inputGroup);
+  }
+});
+
+skycastForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const numDays = parseInt(document.getElementById("numDays").value);
+  const todayWeather = document.getElementById("weatherToday").value;
+
+  weatherPatternsArray.length = 0;
+
+  // Gather weather patterns
+  let weatherPatterns = "";
+  for (let i = 1; i <= numDays; i++) {
+    const dayWeather = document.getElementById(`day${i}`).value;
+    if (!dayWeather) {
+      alert(`Please complete the weather input for Day ${i}.`);
+      return;
+    }
+    weatherPatterns += `Day ${i}: ${dayWeather}\n`;
+    weatherPatternsArray.push({ day: `Day ${i}`, weather: dayWeather });
+  }
+  console.log(weatherPatternsArray);
+
+  const transitionMatrixResult = transitionMatrix(weatherPatternsArray);
+  const predictions = transitionMatrixResult[todayWeather];
+  const likelyWeathers = getMostLikelyWeather(predictions);
+
+  // sooche
+  const predictionText = likelyWeathers // iterates over each element to check for probabilities
+    .map((entry) => `${entry.percentage}% ${entry.weather}`)
+    .join("<br>");
+
+  resultBox.innerHTML = `
+    Today's Weather: ${todayWeather} <br>
+    Predicted Next Weather:<br>${predictionText}
+  `;
+  resultSection.classList.remove("hidden");
+  const transitionPairs = getTransitionPairs(weatherPatternsArray);
+});
+
+// Reset button, val
+document.getElementById("resetBtn").addEventListener("click", () => {
+  skycastForm.reset();
+  weatherInputs.innerHTML = "";
+  resultBox.textContent = "";
+  resultSection.classList.add("hidden");
+  matrix = {};
+  maxProbability = 0;
+  transitionPairs = [];
+});
+
+// global variable for weather frequencies
+let currentWeatherFrequencies = { "Sunny": 0, "Cloudy": 0, "Partly Cloudy": 0, "Rainy": 0, "Thunderstorms": 0 };
+
+// function to get transition pairs
+function getTransitionPairs(weatherPatternsArray) {
+  const transitionPairs = [];
+  for (let weather in currentWeatherFrequencies) {
+    currentWeatherFrequencies[weather] = 0;
+  }
+
+  for (let i = 0; i < weatherPatternsArray.length - 1; i++) {
+    const currentWeather = weatherPatternsArray[i].weather;
+    const nextWeather = weatherPatternsArray[i + 1].weather;
+    const pair = `${currentWeather} -> ${nextWeather}`;
+    // check if the pair already exists in the transitionPairs array
+    let pairFound = false;
+    for (let j = 0; j < transitionPairs.length; j++) {
+      if (transitionPairs[j].pair === pair) {
+        transitionPairs[j].frequency++;
+        pairFound = true;
+        break;
+      }
+    }
+    if (!pairFound) {
+      transitionPairs.push({ pair, frequency: 1 });
+      currentWeatherFrequencies[currentWeather]++;
+    }
+  }
+  console.log('Frequency of current-next pairs:', transitionPairs);
+  for (const weather in currentWeatherFrequencies) {
+    console.log(`From ${weather}: ${currentWeatherFrequencies[weather]}`);
+  }
+
+  transitionMatrix(weatherPatternsArray);
+  
+  return transitionPairs;
+}
+// lizbeth
+function transitionMatrix(data) {
+  const weatherTypes = ["Sunny", "Cloudy", "Partly Cloudy", "Rainy", "Thunderstorms"];
+  const matrix = {};
+
+  // initialize the matrix with zeros
+  weatherTypes.forEach((w1) => {
+    matrix[w1] = {};
+    weatherTypes.forEach((w2) => (matrix[w1][w2] = 0));
+  });
+
+  // get the frequencies of current-next pairs
+  for (let i = 0; i < data.length - 1; i++) {
+    const current = data[i].weather;
+    const next = data[i + 1].weather;
+    if (matrix[current]) matrix[current][next]++;
+  }
+  console.table(matrix);
+
+  //process each row in the matrix & then divide by the # of transition based onn frequencies
+  for (const w in matrix) {
+    const rowSum = Object.values(matrix[w]).reduce((a, b) => a + b, 0);
+    for (const w2 in matrix[w]) {
+      matrix[w][w2] = rowSum ? (matrix[w][w2] / rowSum).toFixed(2) : 0;
+    }
+  }
+  console.table(matrix);
+  return matrix;
+}
+
+//sooche
+function getMostLikelyWeather(probabilities) {
+  let maxProbability = 0; //variable for the highest probability
+  const likelyWeathers = [];
+
+  //iterates over probabilities to find the highest value
+  for (const prob of Object.values(probabilities)) { // prob- probability value in each weather type 
+    const currentProbability = parseFloat(prob);
+    if (currentProbability > maxProbability) {
+      maxProbability = currentProbability;
+      console.log(maxProbability);
+    }
+  }
+  
+   // If all probabilities are 0
+   if (maxProbability === 0) {
+    return [{ weather: "Impossible to Predict", percentage: "0.00" }];
+  }
+
+  // match maxProbability to the entries in probabilities
+  for (const [weather, prob] of Object.entries(probabilities)) { //weather type and its probability
+    if (parseFloat(prob) === maxProbability) {
+      likelyWeathers.push({ weather, percentage: (maxProbability * 100).toFixed(2) });
+    }
+  }
+  return likelyWeathers;
+}
+</script>
+</body>
+</html>
